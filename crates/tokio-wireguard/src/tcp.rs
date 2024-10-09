@@ -160,14 +160,23 @@ impl TcpStream {
         self.socket.poll_ready(Interest::READABLE, cx)
     }
 
-    fn read_io<B: BufMut>(socket: &mut Socket<'static>, mut buf: B) -> Poll<Result<usize>> {
+    fn read_io(socket: &mut Socket<'static>, buf: &mut ReadBuf<'_>) -> Poll<Result<usize>> {
         match socket.recv(|data| {
+
+            if buf.initialize_unfilled().len() == 0 {
+                println!("WARNING USING A 0 (ZERO) SIZE VEC AS BUF IN READ vec![]")
+            }
+
             let len = usize::min(buf.remaining_mut(), data.len());
+            println!("rm0: {}",buf.remaining_mut());
+            println!("RM: {}",data.len());
             buf.put_slice(&data[..len]);
-            (len, len)
+            println!("RM2: {}",data.len());
+            let data_len = data.len();
+            (len,len)
         }) {
             Ok(len) if len > 0 => Poll::Ready(Ok(len)),
-            Ok(..) => Poll::Pending,
+            Ok(len) => {println!("RM3: {}",len); Poll::Pending},
             Err(RecvError::Finished) => Poll::Ready(Ok(0)),
             Err(RecvError::InvalidState) => {
                 Poll::Ready(Err(Error::from(ErrorKind::ConnectionAborted)))
@@ -175,7 +184,7 @@ impl TcpStream {
         }
     }
     /// [`tokio::net::TcpStream::try_read`]
-    pub fn try_read<B: BufMut>(&self, buf: B) -> Result<usize> {
+    pub fn try_read(&self, buf: &mut ReadBuf<'_>) -> Result<usize> {
         self.socket.try_io(|s| Self::read_io(s, buf))
     }
 
@@ -475,7 +484,7 @@ impl<'a> ReadHalf<'a> {
     }
 
     /// [`tokio::net::tcp::ReadHalf::try_read`]
-    pub fn try_read<B: BufMut>(&self, buf: B) -> Result<usize> {
+    pub fn try_read(&self, buf: &mut ReadBuf<'_>) -> Result<usize> {
         self.0.try_read(buf)
     }
 
@@ -605,7 +614,7 @@ impl OwnedReadHalf {
     }
 
     /// [`tokio::net::tcp::OwnedReadHalf::try_read`]
-    pub fn try_read<B: BufMut>(&self, buf: B) -> Result<usize> {
+    pub fn try_read(&self, buf: &mut ReadBuf<'_>) -> Result<usize> {
         self.0.try_read(buf)
     }
 
