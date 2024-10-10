@@ -175,10 +175,11 @@ impl TcpStream {
             let data_len = data.len();
             (len,len)
         }) {
-            Ok(len) if len > 0 => Poll::Ready(Ok(len)),
-            Ok(len) => {println!("RM3: {}",len); Poll::Pending},
-            Err(RecvError::Finished) => Poll::Ready(Ok(0)),
+            Ok(len) if len > 0 => {println!("Poll::Ready"); Poll::Ready(Ok(len))},
+            Ok(len) => {println!("Poll::Pending: {}",len); Poll::Pending},
+            Err(RecvError::Finished) => {println!("RecvError::Finished"); Poll::Ready(Ok(0))},
             Err(RecvError::InvalidState) => {
+                println!("RecvError::InvalidState");
                 Poll::Ready(Err(Error::from(ErrorKind::ConnectionAborted)))
             }
         }
