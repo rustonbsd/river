@@ -70,8 +70,10 @@ impl WireGuardProxyConfig {
             }],
         };
         let interface = get_or_init_wg_interface(config).await.unwrap();
+        let cloned_interface = interface.lock().await.clone();
+        let con = TcpStream::connect(addr, cloned_interface).await.unwrap();
 
-        Ok(TcpStream::connect(addr, interface.lock().await.clone()).await.unwrap())
+        Ok(con)
     }
 }
 
