@@ -71,9 +71,10 @@ impl WireGuardProxyConfig {
         };
         let interface = get_or_init_wg_interface(config).await.unwrap();
         let cloned_interface = interface.lock().await.clone();
-        let con = TcpStream::connect(addr, cloned_interface).await.unwrap();
-
-        Ok(con)
+        match TcpStream::connect(addr, cloned_interface).await {
+            Ok(con) => Ok(con),
+            Err(_) => bail!("failed to create tcp stream over wireguard"),
+        }
     }
 }
 
